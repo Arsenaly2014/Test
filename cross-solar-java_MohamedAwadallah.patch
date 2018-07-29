@@ -1,0 +1,313 @@
+From 62c88f3e0b66666ea6f11d28db7d0ffa0d8a528f Mon Sep 17 00:00:00 2001
+From: Arsenaly2014 <mohamed.awadallah.mohamed@gmail.com>
+Date: Sun, 29 Jul 2018 08:14:36 +0200
+Subject: [PATCH] My submission
+XOV: XO_0_0_1
+
+---
+ Readme.txt                                         |  2 +-
+ .../crossover/techtrial/CrossSolarApplication.java |  5 +++
+ .../techtrial/controller/PanelController.java      | 38 ++++++++++++++++++----
+ .../crossover/techtrial/dto/DailyElectricity.java  |  4 ++-
+ .../repository/HourlyElectricityRepository.java    | 25 +++++++++++++-
+ .../techtrial/repository/PanelRepository.java      |  3 ++
+ .../service/HourlyElectricityService.java          | 22 +++++++++++++
+ .../service/HourlyElectricityServiceImpl.java      | 32 ++++++++++++++++--
+ 8 files changed, 119 insertions(+), 12 deletions(-)
+
+diff --git a/Readme.txt b/Readme.txt
+index 91be5e0..5916284 100644
+--- a/Readme.txt
++++ b/Readme.txt
+@@ -27,7 +27,7 @@ Development Environment:
+ 
+ Production Environment:
+   This is how we are going to run and evaluate your submission, so please make sure to run below steps before submitting your answer.
+-
++	
+   1) Make sure to run unit tests,check code coverage, ensure application is compiling and all dependencies are included.
+   2) Commit everything using (git add --all && git commit -m "My submission")
+   3) Create patch file with name without spaces 'cross-solar-java_<YourNameHere>.patch', using the specified tag as the starting point (git format-patch initial-commit --stdout > cross-solar-java_<yournamehere>.patch)
+diff --git a/src/main/java/com/crossover/techtrial/CrossSolarApplication.java b/src/main/java/com/crossover/techtrial/CrossSolarApplication.java
+index 507d8c0..f0a24fa 100644
+--- a/src/main/java/com/crossover/techtrial/CrossSolarApplication.java
++++ b/src/main/java/com/crossover/techtrial/CrossSolarApplication.java
+@@ -2,7 +2,12 @@ package com.crossover.techtrial;
+ 
+ import org.springframework.boot.SpringApplication;
+ import org.springframework.boot.autoconfigure.SpringBootApplication;
++import org.springframework.boot.autoconfigure.domain.EntityScan;
++import org.springframework.data.jpa.convert.threeten.Jsr310JpaConverters;
+ 
++@EntityScan(
++		  basePackageClasses = { CrossSolarApplication.class, Jsr310JpaConverters.class }
++		)
+ @SpringBootApplication
+ public class CrossSolarApplication {
+ 
+diff --git a/src/main/java/com/crossover/techtrial/controller/PanelController.java b/src/main/java/com/crossover/techtrial/controller/PanelController.java
+index d308f18..2497eb1 100644
+--- a/src/main/java/com/crossover/techtrial/controller/PanelController.java
++++ b/src/main/java/com/crossover/techtrial/controller/PanelController.java
+@@ -1,12 +1,12 @@
+ package com.crossover.techtrial.controller;
+ 
+-import com.crossover.techtrial.dto.DailyElectricity;
+-import com.crossover.techtrial.model.HourlyElectricity;
+-import com.crossover.techtrial.model.Panel;
+-import com.crossover.techtrial.service.HourlyElectricityService;
+-import com.crossover.techtrial.service.PanelService;
++import java.time.LocalDate;
++import java.time.LocalDateTime;
+ import java.util.ArrayList;
++import java.util.Calendar;
++import java.util.Date;
+ import java.util.List;
++
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.data.domain.Page;
+ import org.springframework.data.domain.Pageable;
+@@ -18,6 +18,12 @@ import org.springframework.web.bind.annotation.PostMapping;
+ import org.springframework.web.bind.annotation.RequestBody;
+ import org.springframework.web.bind.annotation.RestController;
+ 
++import com.crossover.techtrial.dto.DailyElectricity;
++import com.crossover.techtrial.model.HourlyElectricity;
++import com.crossover.techtrial.model.Panel;
++import com.crossover.techtrial.service.HourlyElectricityService;
++import com.crossover.techtrial.service.PanelService;
++
+ /**
+  * Panel Controller for all Rest APIs related to Panel.
+  * @author Crossover
+@@ -33,6 +39,9 @@ public class PanelController {
+   @Autowired
+   HourlyElectricityService hourlyElectricityService;
+   
++  @Autowired
++  DailyElectricity dailyElectricty;
++  
+   /**
+    * Register a Panel to System and start receiving the electricity statistics.
+    * @param panel to register.
+@@ -54,7 +63,7 @@ public class PanelController {
+   @PostMapping(path = "/api/panels/{panel-serial}/hourly")
+   public ResponseEntity<?> saveHourlyElectricity(
+       @PathVariable(value = "panel-serial") String panelSerial, 
+-      @RequestBody HourlyElectricity hourlyElectricity) {
++      @RequestBody HourlyElectricity hourlyElectricity) {	    
+     return ResponseEntity.ok(hourlyElectricityService.save(hourlyElectricity));
+   }
+    
+@@ -64,7 +73,7 @@ public class PanelController {
+   
+   @GetMapping(path = "/api/panels/{panel-serial}/hourly")
+   public ResponseEntity<?> hourlyElectricity(
+-      @PathVariable(value = "banel-serial") String panelSerial,
++      @PathVariable(value = "panel-serial") String panelSerial,
+       @PageableDefault(size = 5,value = 0) Pageable pageable) {
+     Panel panel = panelService.findBySerial(panelSerial);
+     if (panel == null) {
+@@ -90,6 +99,21 @@ public class PanelController {
+      * IMPLEMENT THE LOGIC HERE and FEEL FREE TO MODIFY OR ADD CODE TO RELATED CLASSES.
+      * MAKE SURE NOT TO CHANGE THE SIGNATURE OF ANY END POINT. NO PAGINATION IS NEEDED HERE.
+      */
++    Panel panelServiceBySerial = panelService.findBySerial(panelSerial);
++    HourlyElectricity findById = hourlyElectricityService.findByPanelId(panelServiceBySerial.getId());
++    
++    DailyElectricity dailyElectricity = new DailyElectricity();
++    Date date = new Date();
++    Calendar cal = Calendar.getInstance();
++    cal.setTime(date);
++    cal.add(Calendar.DAY_OF_MONTH, -1);
++    date=cal.getTime();
++    System.out.println(date);
++    dailyElectricity.setMin(hourlyElectricityService.getMinimumEnergy(date, panelServiceBySerial));
++    dailyElectricity.setMax(hourlyElectricityService.getMaxEnergy(date, panelServiceBySerial));
++    dailyElectricity.setSum(hourlyElectricityService.getSumElectricity(date, panelServiceBySerial));
++    dailyElectricity.setDate(LocalDate.now().minusDays(1));
++    dailyElectricityForPanel.add(dailyElectricity);
+     return ResponseEntity.ok(dailyElectricityForPanel);
+   }
+ }
+\ No newline at end of file
+diff --git a/src/main/java/com/crossover/techtrial/dto/DailyElectricity.java b/src/main/java/com/crossover/techtrial/dto/DailyElectricity.java
+index b0e0ea9..5a4798f 100644
+--- a/src/main/java/com/crossover/techtrial/dto/DailyElectricity.java
++++ b/src/main/java/com/crossover/techtrial/dto/DailyElectricity.java
+@@ -3,12 +3,14 @@ package com.crossover.techtrial.dto;
+ import java.io.Serializable;
+ import java.time.LocalDate;
+ 
++import org.springframework.stereotype.Service;
++
+ /**
+  * DailyElectricity class will hold sum, average,minimum and maximum electricity for a given day.
+  * @author Crossover
+  *
+  */
+-
++@Service
+ public class DailyElectricity implements Serializable {
+   
+   private static final long serialVersionUID = 3605549122072628877L;
+diff --git a/src/main/java/com/crossover/techtrial/repository/HourlyElectricityRepository.java b/src/main/java/com/crossover/techtrial/repository/HourlyElectricityRepository.java
+index b883493..34263a2 100644
+--- a/src/main/java/com/crossover/techtrial/repository/HourlyElectricityRepository.java
++++ b/src/main/java/com/crossover/techtrial/repository/HourlyElectricityRepository.java
+@@ -1,11 +1,17 @@
+ package com.crossover.techtrial.repository;
+ 
+-import com.crossover.techtrial.model.HourlyElectricity;
++import java.time.LocalDateTime;
++import java.util.Date;
++
+ import org.springframework.data.domain.Page;
+ import org.springframework.data.domain.Pageable;
++import org.springframework.data.jpa.repository.Query;
+ import org.springframework.data.repository.PagingAndSortingRepository;
+ import org.springframework.data.rest.core.annotation.RestResource;
+ 
++import com.crossover.techtrial.model.HourlyElectricity;
++import com.crossover.techtrial.model.Panel;
++
+ /**
+  * HourlyElectricity Repository is for all operations for HourlyElectricity.
+  * @author Crossover
+@@ -14,4 +20,21 @@ import org.springframework.data.rest.core.annotation.RestResource;
+ public interface HourlyElectricityRepository 
+     extends PagingAndSortingRepository<HourlyElectricity,Long> {
+   Page<HourlyElectricity> findAllByPanelIdOrderByReadingAtDesc(Long panelId,Pageable pageable);
++  
++  @Query("SELECT avg(u.generatedElectricity) from HourlyElectricity u where Date (  u.readingAt ) = ?1 and panel = ?2")
++  Long getAverageElectricity(Date readingAt,Panel panel);
++  
++  @Query("SELECT max(u.generatedElectricity) from HourlyElectricity u where Date (  u.readingAt ) = ?1 and panel = ?2")
++  Long getMaxElectricity(Date readingAt,Panel panel);
++  
++  @Query("SELECT min(u.generatedElectricity) from HourlyElectricity u where Date (  u.readingAt ) = ?1 and u.panel = ?2")
++  Long getMinElectricity( Date readingAt,Panel panel);
++  
++  @Query("SELECT sum(u.generatedElectricity) from HourlyElectricity u where Date (  u.readingAt ) = ?1 and panel = ?2")
++  Long getSumElectricity(Date readingAt,Panel panel);
++  
++  
++  HourlyElectricity findByPanelId(Long panel);
++
++  
+ }
+diff --git a/src/main/java/com/crossover/techtrial/repository/PanelRepository.java b/src/main/java/com/crossover/techtrial/repository/PanelRepository.java
+index dcba8f3..64bf1f3 100644
+--- a/src/main/java/com/crossover/techtrial/repository/PanelRepository.java
++++ b/src/main/java/com/crossover/techtrial/repository/PanelRepository.java
+@@ -1,6 +1,7 @@
+ package com.crossover.techtrial.repository;
+ 
+ import com.crossover.techtrial.model.Panel;
++
+ import org.springframework.data.repository.PagingAndSortingRepository;
+ import org.springframework.data.rest.core.annotation.RestResource;
+ /**
+@@ -12,4 +13,6 @@ import org.springframework.data.rest.core.annotation.RestResource;
+ @RestResource(exported = false)
+ public interface PanelRepository extends PagingAndSortingRepository<Panel, Long> {
+   Panel findBySerial(String serial);
++  
++ 
+ }
+diff --git a/src/main/java/com/crossover/techtrial/service/HourlyElectricityService.java b/src/main/java/com/crossover/techtrial/service/HourlyElectricityService.java
+index 70c40b7..449ff07 100644
+--- a/src/main/java/com/crossover/techtrial/service/HourlyElectricityService.java
++++ b/src/main/java/com/crossover/techtrial/service/HourlyElectricityService.java
+@@ -1,6 +1,12 @@
+ package com.crossover.techtrial.service;
+ 
+ import com.crossover.techtrial.model.HourlyElectricity;
++import com.crossover.techtrial.model.Panel;
++
++import java.time.LocalDate;
++import java.time.LocalDateTime;
++import java.util.Date;
++
+ import org.springframework.data.domain.Page;
+ import org.springframework.data.domain.Pageable;
+ 
+@@ -13,4 +19,20 @@ public interface HourlyElectricityService {
+   HourlyElectricity save(HourlyElectricity hourlyElectricity);
+   
+   Page<HourlyElectricity> getAllHourlyElectricityByPanelId(Long panelId, Pageable pageable);
++
++  HourlyElectricity findByPanelId(Long panel);
++
++
++
++
++  Long getMinimumEnergy(Date date, Panel panel);
++
++  Long getMaxEnergy(Date day, Panel panel);
++
++  Long getSumElectricity(Date day, Panel panel);
++
++
++
++  
++  
+ }
+diff --git a/src/main/java/com/crossover/techtrial/service/HourlyElectricityServiceImpl.java b/src/main/java/com/crossover/techtrial/service/HourlyElectricityServiceImpl.java
+index 6634e49..bf2d3ae 100644
+--- a/src/main/java/com/crossover/techtrial/service/HourlyElectricityServiceImpl.java
++++ b/src/main/java/com/crossover/techtrial/service/HourlyElectricityServiceImpl.java
+@@ -1,13 +1,16 @@
+ package com.crossover.techtrial.service;
+ 
+-import com.crossover.techtrial.model.HourlyElectricity;
+-import com.crossover.techtrial.repository.HourlyElectricityRepository;
++import java.util.Date;
+ 
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.data.domain.Page;
+ import org.springframework.data.domain.Pageable;
+ import org.springframework.stereotype.Service;
+ 
++import com.crossover.techtrial.model.HourlyElectricity;
++import com.crossover.techtrial.model.Panel;
++import com.crossover.techtrial.repository.HourlyElectricityRepository;
++
+ /**
+  * HourlyElectricityServiceImpl will handle electricity generated by a Panel.
+  *
+@@ -27,5 +30,30 @@ public class HourlyElectricityServiceImpl implements HourlyElectricityService {
+   public Page<HourlyElectricity> getAllHourlyElectricityByPanelId(Long panelId, Pageable pageable) {
+     return hourlyElectricityRepository.findAllByPanelIdOrderByReadingAtDesc(panelId, pageable);
+   }
++
++@Override
++public HourlyElectricity findByPanelId(Long panel) {
++	// TODO Auto-generated method stub
++	return hourlyElectricityRepository.findByPanelId(panel);
++}
++
++
++@Override
++public Long getMinimumEnergy(Date day,Panel panel)
++{
++	return hourlyElectricityRepository.getMinElectricity(day,panel);
++}
++
++@Override
++public Long getMaxEnergy(Date day,Panel panel)
++{
++	return hourlyElectricityRepository.getMaxElectricity(day,panel);
++}
++
++@Override
++public Long getSumElectricity(Date day,Panel panel)
++{
++	return hourlyElectricityRepository.getMaxElectricity(day,panel);
++}
+   
+ }
+\ No newline at end of file
+-- 
+2.9.3.windows.2
+

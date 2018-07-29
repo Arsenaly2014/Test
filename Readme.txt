@@ -27,7 +27,7 @@ Development Environment:
 
 Production Environment:
   This is how we are going to run and evaluate your submission, so please make sure to run below steps before submitting your answer.
-
+	
   1) Make sure to run unit tests,check code coverage, ensure application is compiling and all dependencies are included.
   2) Commit everything using (git add --all && git commit -m "My submission")
   3) Create patch file with name without spaces 'cross-solar-java_<YourNameHere>.patch', using the specified tag as the starting point (git format-patch initial-commit --stdout > cross-solar-java_<yournamehere>.patch)
